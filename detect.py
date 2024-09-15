@@ -34,8 +34,15 @@ import os
 import platform
 import sys
 from pathlib import Path
+import serial
+import time
 
 import torch
+
+# Initialize serial connection with Arduino
+arduino = serial.Serial(port='COM3', baudrate=9600, timeout=.1)  # Update port to the correct one for your Arduino
+time.sleep(2)  # Allow time for the serial connection to initialize
+
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
@@ -257,7 +264,17 @@ def run(
                     confidence = float(conf)
                     confidence_str = f"{confidence:.2f}"
 
-                    if save_csv:
+                     # Define the conditions for car (class 2) or truck (class 7) with confidence > 0.75
+                    is_car_or_truck = (c == 2 or c == 7) and confidence > 0.72
+                    
+                     # Send the boolean value to the Arduino
+                    if is_car_or_truck:
+                        arduino.write(b'1')  # Send '1' to Arduino to turn on the light
+                        print("Car or truck detected with high confidence.")
+                    else:
+                        arduino.write(b'0')  # Send '0' to Arduino to turn off the light
+
+                    if save_csv:    
                         write_to_csv(p.name, label, confidence_str)
 
                     if save_txt:  # Write to file
